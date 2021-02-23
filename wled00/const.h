@@ -25,6 +25,10 @@
 #define USERMOD_ID_ROTARY_ENC_UI  8            //Usermod "usermod_v2_rotary_encoder_ui.h"
 #define USERMOD_ID_AUTO_SAVE      9            //Usermod "usermod_v2_auto_save.h"
 #define USERMOD_ID_DHT           10            //Usermod "usermod_dht.h"
+#define USERMOD_ID_MODE_SORT     11            //Usermod "usermod_v2_mode_sort.h"
+#define USERMOD_ST7789_DISPLAY   97            //Usermod "ST7789_display.h"
+
+
 
 //Access point behavior
 #define AP_BEHAVIOR_BOOT_NO_CONN  0            //Open AP when no connection after boot
@@ -130,6 +134,7 @@
 #define WLED_ETH_NONE             0
 #define WLED_ETH_WT32_ETH01       1
 #define WLED_ETH_ESP32_POE        2
+#define WLED_ETH_WESP32           3
 
 //Hue error codes
 #define HUE_ERROR_INACTIVE        0
