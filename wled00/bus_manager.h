@@ -37,7 +37,7 @@ struct BusConfig {
   uint8_t milliAmpsPerLed;
   uint16_t milliAmpsMax;
 
-  BusConfig(uint8_t busType, uint8_t* ppins, uint16_t pstart, uint16_t len = 1, uint8_t pcolorOrder = COL_ORDER_GRB, bool rev = false, uint8_t skip = 0, byte aw=RGBW_MODE_MANUAL_ONLY, uint16_t clock_kHz=0U, bool dblBfr=false, uint8_t maPerLed=55, uint16_t maMax=ABL_MILLIAMPS_DEFAULT)
+  BusConfig(uint8_t busType, uint8_t* ppins, uint16_t pstart, uint16_t len = 1, uint8_t pcolorOrder = COL_ORDER_GRB, bool rev = false, uint8_t skip = 0, byte aw=RGBW_MODE_MANUAL_ONLY, uint16_t clock_kHz=0U, bool dblBfr=false, uint8_t maPerLed=LED_MILLIAMPS_DEFAULT, uint16_t maMax=ABL_MILLIAMPS_DEFAULT)
   : count(len)
   , start(pstart)
   , colorOrder(pcolorOrder)
@@ -129,7 +129,7 @@ class Bus {
     virtual uint32_t getPixelColor(uint16_t pix) { return 0; }
     virtual void     setBrightness(uint8_t b)    { _bri = b; };
     virtual uint8_t  getPins(uint8_t* pinArray)  { return 0; }
-    virtual uint16_t getLength()                 { return _len; }
+    virtual uint16_t getLength()                 { return isOk() ? _len : 0; }
     virtual void     setColorOrder(uint8_t co)   {}
     virtual uint8_t  getColorOrder()             { return COL_ORDER_RGB; }
     virtual uint8_t  skippedLeds()               { return 0; }
@@ -169,10 +169,11 @@ class Bus {
           type == TYPE_FW1906        || type == TYPE_WS2805 ) return true;
       return false;
     }
-    static int16_t getCCT() { return _cct; }
+    static inline int16_t getCCT() { return _cct; }
     static void setCCT(int16_t cct) {
       _cct = cct;
     }
+    static inline uint8_t getCCTBlend() { return _cctBlend; }
     static void setCCTBlend(uint8_t b) {
       if (b > 100) b = 100;
       _cctBlend = (b * 127) / 100;
@@ -364,6 +365,9 @@ class BusManager {
     //do not call this method from system context (network callback)
     static void removeAll();
 
+    static void on(void);
+    static void off(void);
+
     static void show();
     static bool canAllShow();
     static void setStatusPixel(uint32_t c);
@@ -391,7 +395,11 @@ class BusManager {
     static ColorOrderMap colorOrderMap;
     static uint16_t _milliAmpsUsed;
     static uint16_t _milliAmpsMax;
+    static uint8_t _parallelOutputs;
 
+    #ifdef ESP32_DATA_IDLE_HIGH
+    static void    esp32RMTInvertIdle();
+    #endif
     static uint8_t getNumVirtualBusses() {
       int j = 0;
       for (int i=0; i<numBusses; i++) if (busses[i]->getType() >= TYPE_NET_DDP_RGB && busses[i]->getType() < 96) j++;
