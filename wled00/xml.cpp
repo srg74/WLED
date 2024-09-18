@@ -484,6 +484,7 @@ void getSettingsJS(byte subPage, char* dest)
     sappend('c',SET_F("RB"),receiveNotificationBrightness);
     sappend('c',SET_F("RC"),receiveNotificationColor);
     sappend('c',SET_F("RX"),receiveNotificationEffects);
+    sappend('c',SET_F("RP"),receiveNotificationPalette);
     sappend('c',SET_F("SO"),receiveSegmentOptions);
     sappend('c',SET_F("SG"),receiveSegmentBounds);
     sappend('c',SET_F("SS"),sendNotifications);
@@ -570,6 +571,9 @@ void getSettingsJS(byte subPage, char* dest)
     oappend(SET_F("toggle('Hue');"));    // hide Hue Sync settings
     #endif
     sappend('v',SET_F("BD"),serialBaud);
+    #ifndef WLED_ENABLE_ADALIGHT
+    oappend(SET_F("toggle('Serial);"));
+    #endif
   }
 
   if (subPage == SUBPAGE_TIME)

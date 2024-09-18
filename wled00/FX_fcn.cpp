@@ -1262,16 +1262,30 @@ void WS2812FX::finalizeInit() {
             DEBUG_PRINTLN(F("No available pins left! Can't configure output."));
             return;
           }
-          // is the newly assigned pin already defined? try next in line until there are no clashes
+          // is the newly assigned pin already defined or used previously?
+          // try next in line until there are no clashes or we run out of pins
           bool clash;
           do {
             clash = false;
-            for (const auto &pin : defDataPins) {
-              if (pin == defPin[j]) {
-                defPin[j]++;
-                if (defPin[j] < WLED_NUM_PINS) clash = true;
+            // check for conflicts on current bus
+            for (const auto &pin : defPin) {
+              if (&pin != &defPin[j] && pin == defPin[j]) {
+                clash = true;
+                break;
               }
             }
+            // We already have a clash on current bus, no point checking next buses
+            if (!clash) {
+              // check for conflicts in defined pins
+              for (const auto &pin : defDataPins) {
+                if (pin == defPin[j]) {
+                  clash = true;
+                  break;
+                }
+              }
+            }
+            if (clash) defPin[j]++;
+            if (defPin[j] >= WLED_NUM_PINS) break;
           } while (clash);
         }
       }
