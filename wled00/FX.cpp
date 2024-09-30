@@ -4931,8 +4931,8 @@ uint16_t mode_2DColoredBursts() {              // By: ldirko   https://editor.so
   SEGMENT.fadeToBlackBy(40);
   for (size_t i = 0; i < numLines; i++) {
     byte x1 = beatsin8(2 + SEGMENT.speed/16, 0, (cols - 1));
-    byte x2 = beatsin8(1 + SEGMENT.speed/16, 0, (cols - 1));
-    byte y1 = beatsin8(5 + SEGMENT.speed/16, 0, (rows - 1), 0, i * 24);
+    byte x2 = beatsin8(1 + SEGMENT.speed/16, 0, (rows - 1));
+    byte y1 = beatsin8(5 + SEGMENT.speed/16, 0, (cols - 1), 0, i * 24);
     byte y2 = beatsin8(3 + SEGMENT.speed/16, 0, (rows - 1), 0, i * 48 + 64);
     CRGB color = ColorFromPalette(SEGPALETTE, i * 255 / numLines + (SEGENV.aux0&0xFF), 255, LINEARBLEND);
 
@@ -7528,8 +7528,9 @@ uint16_t mode_2DAkemi(void) {
 
   //add geq left and right
   if (um_data && fftResult) {
-    for (int x=0; x < cols/8; x++) {
-      unsigned band = x * cols/8;
+    int xMax = cols/8;
+    for (int x=0; x < xMax; x++) {
+      unsigned band = map(x, 0, max(xMax,4), 0, 15);  // map 0..cols/8 to 16 GEQ bands
       band = constrain(band, 0, 15);
       int barHeight = map(fftResult[band], 0, 255, 0, 17*rows/32);
       CRGB color = CRGB(SEGMENT.color_from_palette((band * 35), false, PALETTE_SOLID_WRAP, 0));
