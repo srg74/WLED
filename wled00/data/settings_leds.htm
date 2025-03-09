@@ -24,6 +24,7 @@
 		function is16b(t)  { return !!(gT(t).c & 0x10); }           // is digital 16 bit type
 		function mustR(t)  { return !!(gT(t).c & 0x20); }           // Off refresh is mandatory
 		function numPins(t){ return Math.max(gT(t).t.length, 1); }  // type length determines number of GPIO pins
+		function chrID(x)  { return String.fromCharCode((x<10?48:55)+x); }
 		function S() {
 			getLoc();
 			loadJS(getURL('/settings/s.js?p=2'), false, ()=>{
