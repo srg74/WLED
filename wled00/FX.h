@@ -1,3 +1,4 @@
+#pragma once
 /*
   WS2812FX.h - Library for WS2812 LED effects.
   Harm Aldick - 2016
@@ -8,12 +9,15 @@
   Adapted from code originally licensed under the MIT license
 
   Modified for WLED
+
+  Segment class/struct (c) 2022 Blaz Kristan (@blazoncek)
 */
 
 #ifndef WS2812FX_h
 #define WS2812FX_h
 
 #include <vector>
+#include "wled.h"
 
 #include "const.h"
 
@@ -67,18 +71,15 @@
 /* each segment uses 82 bytes of SRAM memory, so if you're application fails because of
   insufficient memory, decreasing MAX_NUM_SEGMENTS may help */
 #ifdef ESP8266
-  #define MAX_NUM_SEGMENTS    16
+  #define MAX_NUM_SEGMENTS  16
   /* How much data bytes all segments combined may allocate */
   #define MAX_SEGMENT_DATA  5120
+#elif defined(CONFIG_IDF_TARGET_ESP32S2)
+  #define MAX_NUM_SEGMENTS  20
+  #define MAX_SEGMENT_DATA  (MAX_NUM_SEGMENTS*512)  // 10k by default (S2 is short on free RAM)
 #else
-  #ifndef MAX_NUM_SEGMENTS
-    #define MAX_NUM_SEGMENTS  32
-  #endif
-  #if defined(ARDUINO_ARCH_ESP32S2)
-    #define MAX_SEGMENT_DATA  MAX_NUM_SEGMENTS*768 // 24k by default (S2 is short on free RAM)
-  #else
-    #define MAX_SEGMENT_DATA  MAX_NUM_SEGMENTS*1280 // 40k by default
-  #endif
+  #define MAX_NUM_SEGMENTS  32  // warning: going beyond 32 may consume too much RAM for stable operation
+  #define MAX_SEGMENT_DATA  (MAX_NUM_SEGMENTS*1280) // 40k by default
 #endif
 
 /* How much data bytes each segment should max allocate to leave enough space for other segments,
@@ -530,6 +531,9 @@ typedef struct Segment {
     inline uint16_t length()             const { return width() * height(); }               // segment length (count) in physical pixels
     inline uint16_t groupLength()        const { return grouping + spacing; }
     inline uint8_t  getLightCapabilities() const { return _capabilities; }
+    inline void     deactivate()               { setGeometry(0,0); }
+    inline Segment &clearName()                { if (name) free(name); name = nullptr; return *this; }
+    inline Segment &setName(const String &name) { return setName(name.c_str()); }
 
     inline static uint16_t getUsedSegmentData()    { return _usedSegmentData; }
     inline static void addUsedSegmentData(int len) { _usedSegmentData += len; }
@@ -539,14 +543,15 @@ typedef struct Segment {
     static void     handleRandomPalette();
     inline static const CRGBPalette16 &getCurrentPalette() { return Segment::_currentPalette; }
 
-    void    setUp(uint16_t i1, uint16_t i2, uint8_t grp=1, uint8_t spc=0, uint16_t ofs=UINT16_MAX, uint16_t i1Y=0, uint16_t i2Y=1);
+    void    setGeometry(uint16_t i1, uint16_t i2, uint8_t grp=1, uint8_t spc=0, uint16_t ofs=UINT16_MAX, uint16_t i1Y=0, uint16_t i2Y=1);
     Segment &setColor(uint8_t slot, uint32_t c);
     Segment &setCCT(uint16_t k);
     Segment &setOpacity(uint8_t o);
     Segment &setOption(uint8_t n, bool val);
     Segment &setMode(uint8_t fx, bool loadDefaults = false);
     Segment &setPalette(uint8_t pal);
-    uint8_t differs(Segment& b) const;
+    Segment &setName(const char* name);
+    uint8_t differs(const Segment& b) const;
     void    refreshLightCapabilities();
 
     // runtime data functions

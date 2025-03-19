@@ -300,7 +300,7 @@ void parseNotifyPacket(uint8_t *udpIn) {
       if (!receiveSegmentOptions) {
         DEBUG_PRINTF_P(PSTR("Set segment w/o options: %d [%d,%d;%d,%d]\n"), id, (int)start, (int)stop, (int)startY, (int)stopY);
         strip.suspend(); //should not be needed as UDP handling is not done in ISR callbacks but still added "just in case"
-        selseg.setUp(start, stop, selseg.grouping, selseg.spacing, offset, startY, stopY);
+        selseg.setGeometry(start, stop, selseg.grouping, selseg.spacing, offset, startY, stopY);
         strip.resume();
         continue; // we do receive bounds, but not options
       }
@@ -342,12 +342,12 @@ void parseNotifyPacket(uint8_t *udpIn) {
       if (receiveSegmentBounds) {
         DEBUG_PRINTF_P(PSTR("Set segment w/ options: %d [%d,%d;%d,%d]\n"), id, (int)start, (int)stop, (int)startY, (int)stopY);
         strip.suspend(); //should not be needed as UDP handling is not done in ISR callbacks but still added "just in case"
-        selseg.setUp(start, stop, udpIn[5+ofs], udpIn[6+ofs], offset, startY, stopY);
+        selseg.setGeometry(start, stop, udpIn[5+ofs], udpIn[6+ofs], offset, startY, stopY);
         strip.resume();
       } else {
         DEBUG_PRINTF_P(PSTR("Set segment grouping: %d [%d,%d]\n"), id, (int)udpIn[5+ofs], (int)udpIn[6+ofs]);
         strip.suspend(); //should not be needed as UDP handling is not done in ISR callbacks but still added "just in case"
-        selseg.setUp(selseg.start, selseg.stop, udpIn[5+ofs], udpIn[6+ofs], selseg.offset, selseg.startY, selseg.stopY);
+        selseg.setGeometry(selseg.start, selseg.stop, udpIn[5+ofs], udpIn[6+ofs], selseg.offset, selseg.startY, selseg.stopY);
         strip.resume();
       }
     }
@@ -979,7 +979,7 @@ void espNowReceiveCB(uint8_t* address, uint8_t* data, uint8_t len, signed int rs
 
   // handle WiZ Mote data
   if (data[0] == 0x91 || data[0] == 0x81 || data[0] == 0x80) {
-    handleRemote(data, len);
+    handleWiZdata(data, len);
     return;
   }
 

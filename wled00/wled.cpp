@@ -84,6 +84,9 @@ void WLED::loop()
   #ifndef WLED_DISABLE_INFRARED
   handleIR();
   #endif
+  #ifndef WLED_DISABLE_ESPNOW
+  handleRemote();
+  #endif
   #ifndef WLED_DISABLE_ALEXA
   handleAlexa();
   #endif
@@ -179,46 +182,7 @@ void WLED::loop()
     DEBUG_PRINTLN(F("Re-init busses."));
     bool aligned = strip.checkSegmentAlignment(); //see if old segments match old bus(ses)
     BusManager::removeAll();
-    unsigned mem = 0;
-    // determine if it is sensible to use parallel I2S outputs on ESP32 (i.e. more than 5 outputs = 1 I2S + 4 RMT)
-    bool useParallel = false;
-    #if defined(ARDUINO_ARCH_ESP32) && !defined(ARDUINO_ARCH_ESP32S2) && !defined(ARDUINO_ARCH_ESP32S3) && !defined(ARDUINO_ARCH_ESP32C3)
-    unsigned digitalCount = 0;
-    unsigned maxLedsOnBus = 0;
-    unsigned maxChannels = 0;
-    for (unsigned i = 0; i < WLED_MAX_BUSSES+WLED_MIN_VIRTUAL_BUSSES; i++) {
-      if (busConfigs[i] == nullptr) break;
-      if (!Bus::isDigital(busConfigs[i]->type)) continue;
-      if (!Bus::is2Pin(busConfigs[i]->type)) {
-        digitalCount++;
-        unsigned channels = Bus::getNumberOfChannels(busConfigs[i]->type);
-        if (busConfigs[i]->count > maxLedsOnBus) maxLedsOnBus = busConfigs[i]->count;
-        if (channels > maxChannels) maxChannels  = channels;
-      }
-    }
-    DEBUG_PRINTF_P(PSTR("Maximum LEDs on a bus: %u\nDigital buses: %u\n"), maxLedsOnBus, digitalCount);
-    // we may remove 300 LEDs per bus limit when NeoPixelBus is updated beyond 2.9.0
-    if (maxLedsOnBus <= 300 && digitalCount > 5) {
-      DEBUG_PRINTF_P(PSTR("Switching to parallel I2S."));
-      useParallel = true;
-      BusManager::useParallelOutput();
-      mem = BusManager::memUsage(maxChannels, maxLedsOnBus, 8); // use alternate memory calculation (hse to be used *after* useParallelOutput())
-    }
-    #endif
-    // create buses/outputs
-    for (unsigned i = 0; i < WLED_MAX_BUSSES+WLED_MIN_VIRTUAL_BUSSES; i++) {
-      if (busConfigs[i] == nullptr || (!useParallel && i > 10)) break;
-      if (useParallel && i < 8) {
-        // if for some unexplained reason the above pre-calculation was wrong, update
-        unsigned memT = BusManager::memUsage(*busConfigs[i]); // includes x8 memory allocation for parallel I2S
-        if (memT > mem) mem = memT; // if we have unequal LED count use the largest
-      } else
-        mem += BusManager::memUsage(*busConfigs[i]); // includes global buffer
-      if (mem <= MAX_LED_MEMORY) BusManager::add(*busConfigs[i]);
-      delete busConfigs[i];
-      busConfigs[i] = nullptr;
-    }
-    strip.finalizeInit(); // also loads default ledmap if present
+    strip.finalizeInit(); // will create buses and also load default ledmap if present
     BusManager::setBrightness(bri); // fix re-initialised bus' brightness #4005
     if (aligned) strip.makeAutoSegments();
     else strip.fixInvalidSegments();
@@ -478,10 +442,7 @@ void WLED::setup()
   if (strcmp(multiWiFi[0].clientSSID, DEFAULT_CLIENT_SSID) == 0)
     showWelcomePage = true;
   WiFi.persistent(false);
-  #ifdef WLED_USE_ETHERNET
   WiFi.onEvent(WiFiEvent);
-  #endif
-
   WiFi.mode(WIFI_STA); // enable scanning
   findWiFi(true);      // start scanning for available WiFi-s
 
@@ -571,6 +532,7 @@ void WLED::beginStrip()
   strip.makeAutoSegments();
   strip.setBrightness(0);
   strip.setShowCallback(handleOverlayDraw);
+  doInitBusses = false;
 
   if (turnOnAtBoot) {
     if (briS > 0) bri = briS;
@@ -781,7 +743,7 @@ int8_t WLED::findWiFi(bool doScan) {
 
 void WLED::initConnection()
 {
-  DEBUG_PRINTLN(F("initConnection() called."));
+  DEBUG_PRINTF_P(PSTR("initConnection() called @ %lus.\n"), millis()/1000);
 
   #ifdef WLED_ENABLE_WEBSOCKETS
   ws.onEvent(wsEvent);
@@ -796,6 +758,7 @@ void WLED::initConnection()
 #endif
 
   WiFi.disconnect(true); // close old connections
+  delay(5);              // wait for hardware to be ready
 #ifdef ESP8266
   WiFi.setPhyMode(force802_3g ? WIFI_PHY_MODE_11G : WIFI_PHY_MODE_11N);
 #endif
@@ -825,9 +788,7 @@ void WLED::initConnection()
   if (WLED_WIFI_CONFIGURED) {
     showWelcomePage = false;
     
-    DEBUG_PRINT(F("Connecting to "));
-    DEBUG_PRINT(multiWiFi[selectedWiFi].clientSSID);
-    DEBUG_PRINTLN(F("..."));
+    DEBUG_PRINTF_P(PSTR("Connecting to %s...\n"), multiWiFi[selectedWiFi].clientSSID);
 
     // convert the "serverDescription" into a valid DNS hostname (alphanumeric)
     char hostname[25];
@@ -926,7 +887,8 @@ void WLED::handleConnection()
 {
   static bool scanDone = true;
   static byte stacO = 0;
-  unsigned long now = millis();
+  const unsigned long now = millis();
+  const unsigned long nowS = now/1000;
   const bool wifiConfigured = WLED_WIFI_CONFIGURED;
 
   // ignore connection handling if WiFi is configured and scan still running
@@ -935,7 +897,7 @@ void WLED::handleConnection()
     return;
 
   if (lastReconnectAttempt == 0 || forceReconnect) {
-    DEBUG_PRINTLN(F("Initial connect or forced reconnect."));
+    DEBUG_PRINTF_P(PSTR("Initial connect or forced reconnect (@ %lus).\n"), nowS);
     selectedWiFi = findWiFi(); // find strongest WiFi
     initConnection();
     interfacesInited = false;
@@ -955,8 +917,7 @@ void WLED::handleConnection()
 #endif
     if (stac != stacO) {
       stacO = stac;
-      DEBUG_PRINT(F("Connected AP clients: "));
-      DEBUG_PRINTLN(stac);
+      DEBUG_PRINTF_P(PSTR("Connected AP clients: %d\n"), (int)stac);
       if (!WLED_CONNECTED && wifiConfigured) {        // trying to connect, but not connected
         if (stac)
           WiFi.disconnect();        // disable search so that AP can work
@@ -979,6 +940,7 @@ void WLED::handleConnection()
       initConnection();
       interfacesInited = false;
       scanDone = true;
+      return;
     }
     //send improv failed 6 seconds after second init attempt (24 sec. after provisioning)
     if (improvActive > 2 && now - lastReconnectAttempt > 6000) {
@@ -987,13 +949,13 @@ void WLED::handleConnection()
     }
     if (now - lastReconnectAttempt > ((stac) ? 300000 : 18000) && wifiConfigured) {
       if (improvActive == 2) improvActive = 3;
-      DEBUG_PRINTLN(F("Last reconnect too old."));
+      DEBUG_PRINTF_P(PSTR("Last reconnect (%lus) too old (@ %lus).\n"), lastReconnectAttempt/1000, nowS);
       if (++selectedWiFi >= multiWiFi.size()) selectedWiFi = 0; // we couldn't connect, try with another network from the list
       initConnection();
     }
     if (!apActive && now - lastReconnectAttempt > 12000 && (!wasConnected || apBehavior == AP_BEHAVIOR_NO_CONN)) {
       if (!(apBehavior == AP_BEHAVIOR_TEMPORARY && now > WLED_AP_TIMEOUT)) {
-        DEBUG_PRINTLN(F("Not connected AP."));
+        DEBUG_PRINTF_P(PSTR("Not connected AP (@ %lus).\n"), nowS);
         initAP();  // start AP only within first 5min
       }
     }
@@ -1003,7 +965,7 @@ void WLED::handleConnection()
         dnsServer.stop();
         WiFi.softAPdisconnect(true);
         apActive = false;
-        DEBUG_PRINTLN(F("Temporary AP disabled."));
+        DEBUG_PRINTF_P(PSTR("Temporary AP disabled (@ %lus).\n"), nowS);
       }
     }
   } else if (!interfacesInited) { //newly connected
