@@ -228,6 +228,7 @@ extern byte realtimeMode;           // used in getMappedPixelIndex()
 #define FX_MODE_LAKE                    75
 #define FX_MODE_METEOR                  76
 //#define FX_MODE_METEOR_SMOOTH           77  // replaced by Meteor
+#define FX_MODE_COPY                    77
 #define FX_MODE_RAILWAY                 78
 #define FX_MODE_RIPPLE                  79
 #define FX_MODE_TWINKLEFOX              80
@@ -685,6 +686,7 @@ class Segment {
 
     // 1D strip
     uint16_t virtualLength() const;
+    uint16_t maxMappingLength() const;
     [[gnu::hot]] void setPixelColor(int n, uint32_t c) const; // set relative pixel within segment with color
     inline void setPixelColor(unsigned n, uint32_t c) const                    { setPixelColor(int(n), c); }
     inline void setPixelColor(int n, byte r, byte g, byte b, byte w = 0) const { setPixelColor(n, RGBW32(r,g,b,w)); }
@@ -807,6 +809,8 @@ class Segment {
     inline void wu_pixel(uint32_t x, uint32_t y, CRGB c) {}
   #endif
   friend class WS2812FX;
+  friend class ParticleSystem2D;
+  friend class ParticleSystem1D;
 };
 
 // main "strip" class (108 bytes)
