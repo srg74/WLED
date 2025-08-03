@@ -87,13 +87,12 @@ const char ShtUsermod::_haMqttDiscovery[] PROGMEM = "Add-To-HA-MQTT-Discovery";
 void ShtUsermod::initShtTempHumiditySensor()
 {
   switch (shtType) {
-    case USERMOD_SHT_TYPE_SHT30: shtTempHumidSensor = (SHT *) new SHT30(); break;
-    case USERMOD_SHT_TYPE_SHT31: shtTempHumidSensor = (SHT *) new SHT31(); break;
-    case USERMOD_SHT_TYPE_SHT35: shtTempHumidSensor = (SHT *) new SHT35(); break;
-    case USERMOD_SHT_TYPE_SHT85: shtTempHumidSensor = (SHT *) new SHT85(); break;
+    case USERMOD_SHT_TYPE_SHT30: shtTempHumidSensor = (SHT *) new SHT30(shtI2cAddress, &Wire); break;
+    case USERMOD_SHT_TYPE_SHT31: shtTempHumidSensor = (SHT *) new SHT31(shtI2cAddress, &Wire); break;
+    case USERMOD_SHT_TYPE_SHT35: shtTempHumidSensor = (SHT *) new SHT35(shtI2cAddress, &Wire); break;
+    case USERMOD_SHT_TYPE_SHT85: shtTempHumidSensor = (SHT *) new SHT85(shtI2cAddress, &Wire); break;
   }
-
-  shtTempHumidSensor->begin(shtI2cAddress); // uses &Wire
+  if (shtTempHumidSensor) shtTempHumidSensor->begin(); 
   if (shtTempHumidSensor->readStatus() == 0xFFFF) {
     DEBUG_PRINTF("[%s] SHT init failed!\n", _name);
     cleanup();
@@ -102,6 +101,7 @@ void ShtUsermod::initShtTempHumiditySensor()
 
   shtInitDone = true;
 }
+
 
 /**
  * Cleanup the SHT sensor.
