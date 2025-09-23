@@ -14,6 +14,7 @@ esp01-update.sh
 replace_fs.py
 wled-update.sh
 
+/tools/organize_firmware.py
 /build_output/
 /node_modules/
 /logs/
