@@ -1,15 +1,6 @@
-#include "usermod_gc9a01_display.h"
+#include "usermod_v2_gc9a01_display.h"
 
 #ifdef USERMOD_GC9A01_DISPLAY
-
-// Implementation of all your methods here
-void UsermodGC9A01Display::setup() {
-  // ...implementation...
-}
-
-void UsermodGC9A01Display::loop() {
-  // ...implementation...
-}
 
 // ...all other method implementations...
 

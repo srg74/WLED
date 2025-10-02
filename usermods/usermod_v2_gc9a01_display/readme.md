@@ -34,14 +34,40 @@ Adds support for GC9A01 240x240 round TFT display to WLED with rotary encoder in
 Add to your `platformio_override.ini`:
 
 ```ini
-[env:esp32_gc9a01]
 extends = env:esp32dev
-build_flags = ${common.build_flags} ${esp32.build_flags}
+upload_speed = 460800
+monitor_speed = 115200
+custom_usermods =
+  usermod_v2_gc9a01_display
+  usermod_v2_rotary_encoder_ui_ALT
+build_flags = ${common.build_flags} ${esp32_idf_V4.build_flags}
+  -D FLD_SPI_DEFAULT
+  -D HW_PIN_SCLKSPI=18
+  -D HW_PIN_MOSISPI=23
+  -D FLD_PIN_DC=15
+  -D FLD_PIN_CS=5
+  -D FLD_PIN_RESET=17
+  -D WLED_DEBUG
+  -D WLED_DISABLE_BROWNOUT_DET
   -D USERMOD_GC9A01_DISPLAY
-  -D USERMOD_ROTARY_ENCODER_UI_ALT  ; Optional rotary encoder
-  -D GC9A01_CS_PIN=5
-  -D GC9A01_DC_PIN=16
-  -D GC9A01_RST_PIN=17
-  -D GC9A01_BL_PIN=4
-lib_deps = ${esp32.lib_deps}
-  bodmer/TFT_eSPI@^2.5.0
+  -DUSER_SETUP_LOADED=1
+  -DGC9A01_DRIVER=1
+  -DTFT_WIDTH=240
+  -DTFT_HEIGHT=240
+  -DTFT_MOSI=23
+  -DTFT_SCLK=18
+  -DTFT_CS=5
+  -DTFT_DC=15
+  -DTFT_RST=17
+  -DTFT_BL=26
+  -DTOUCH_CS=-1
+  -DLOAD_GLCD=1
+  -DLOAD_FONT2=1
+  -DLOAD_FONT4=1
+  -DLOAD_FONT6=1
+  -DLOAD_FONT7=1
+  -DLOAD_FONT8=1
+  -DLOAD_GFXFF=1
+  -DSMOOTH_FONT=1
+  -DSPI_FREQUENCY=27000000
+```
