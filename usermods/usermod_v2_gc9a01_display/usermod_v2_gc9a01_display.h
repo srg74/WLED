@@ -6,21 +6,25 @@
 #include <TFT_eSPI.h>
 #include <SPI.h>
 
-// Pin definitions (can be overridden via build flags)
-#ifndef GC9A01_CS_PIN
-  #define GC9A01_CS_PIN 5
+// Pin definitions - use TFT_eSPI definitions when available
+#ifndef TFT_CS
+  #define TFT_CS 5  // Default fallback
 #endif
+#define GC9A01_CS_PIN TFT_CS
 
-#ifndef GC9A01_DC_PIN
-  #define GC9A01_DC_PIN 16
+#ifndef TFT_DC  
+  #define TFT_DC 16  // Default fallback
 #endif
+#define GC9A01_DC_PIN TFT_DC
 
-#ifndef GC9A01_RST_PIN
-  #define GC9A01_RST_PIN 17
+#ifndef TFT_RST
+  #define TFT_RST 17  // Default fallback  
 #endif
+#define GC9A01_RST_PIN TFT_RST
 
-#ifndef GC9A01_BL_PIN
-  #define GC9A01_BL_PIN 4
+// Use TFT_eSPI's backlight pin definition
+#ifndef TFT_BL
+  #define TFT_BL 4  // Default fallback if not defined by TFT_eSPI
 #endif
 
 #ifndef USERMOD_ID_GC9A01_DISPLAY

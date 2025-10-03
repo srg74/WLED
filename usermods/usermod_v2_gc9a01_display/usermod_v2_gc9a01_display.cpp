@@ -9,8 +9,8 @@ void UsermodGC9A01Display::initDisplay() {
   
   DEBUG_PRINTLN(F("[GC9A01] Initializing TFT display..."));
   
-  pinMode(GC9A01_BL_PIN, OUTPUT);
-  digitalWrite(GC9A01_BL_PIN, HIGH);
+  pinMode(TFT_BL, OUTPUT);
+  digitalWrite(TFT_BL, HIGH);
   DEBUG_PRINTLN(F("[GC9A01] Backlight pin configured"));
   
   tft.init();
@@ -97,25 +97,31 @@ void UsermodGC9A01Display::updateDisplay() {
   }
 
   // Check for time changes (like 4-line display usermod)
-  if (localTime != 0) { // Only if time is available
+  // Update clock only if display is not sleeping
+  if (!displayTurnedOff && localTime != 0) { // Only if time is available and display is on
     uint8_t currentMinute = minute(localTime);
     uint8_t currentHour = hour(localTime);
     
     if (knownMinute != currentMinute) {
       knownMinute = currentMinute;
       needsRedraw = true;
+      DEBUG_PRINTF("[GC9A01] Clock minute changed: %d -> %d\n", knownMinute, currentMinute);
     }
     
     if (knownHour != currentHour) {
       knownHour = currentHour;
       needsRedraw = true;
+      DEBUG_PRINTF("[GC9A01] Clock hour changed: %d -> %d\n", knownHour, currentHour);
     }
   }
 
-  // Check for display timeout (like 4-line display usermod)
-  if (!needsRedraw && displayTimeout > 0) {
-    // Turn off display after timeout with no change
-    if (!displayTurnedOff && (now - lastRedraw > displayTimeout)) {
+  // Check for display timeout - IMPORTANT: Check this AFTER clock updates but BEFORE needsRedraw check
+  if (displayTimeout > 0) {
+    DEBUG_PRINTF("[GC9A01] Timeout check: needsRedraw=%s, displayTurnedOff=%s, elapsed=%lu ms, timeout=%u ms\n", 
+                 needsRedraw ? "true" : "false", displayTurnedOff ? "true" : "false", 
+                 now - lastRedraw, displayTimeout);
+                 
+    if (!needsRedraw && !displayTurnedOff && (now - lastRedraw > displayTimeout)) {
       DEBUG_PRINTF("[GC9A01] Display timeout - going to sleep (no change for %lu ms, timeout: %u ms)\n", now - lastRedraw, displayTimeout);
       sleepDisplay();
       return;
@@ -130,9 +136,10 @@ void UsermodGC9A01Display::updateDisplay() {
       wakeDisplay();
     }
     
-    lastRedraw = now; // Update last redraw timestamp
+    // Update last redraw timestamp AFTER drawing, not before
     DEBUG_PRINTLN(F("[GC9A01] State changed - updating display"));
     drawMainInterface();
+    lastRedraw = now; // Update timestamp only after successful draw
     needsRedraw = false; // Reset the flag after drawing
   } else {
     DEBUG_PRINTF("[GC9A01] No changes detected (last redraw: %lu ms ago)\n", now - lastRedraw);
@@ -506,20 +513,19 @@ void UsermodGC9A01Display::drawWLEDLogo() {
 
 void UsermodGC9A01Display::setBrightness(uint8_t bri) {
   brightness = bri;
-  analogWrite(GC9A01_BL_PIN, brightness);
+  analogWrite(TFT_BL, brightness);
 }
 
 void UsermodGC9A01Display::sleepDisplay() {
-  digitalWrite(GC9A01_BL_PIN, LOW);
+  digitalWrite(TFT_BL, LOW);
   displayTurnedOff = true;
   DEBUG_PRINTLN(F("[GC9A01] Display sleeping - setting displayTurnedOff = true"));
 }
 
 void UsermodGC9A01Display::wakeDisplay() {
-  digitalWrite(GC9A01_BL_PIN, HIGH);
+  digitalWrite(TFT_BL, HIGH);
   displayTurnedOff = false;
-  needsRedraw = true;
-  lastRedraw = millis(); // Reset timeout when waking up
+  // Don't set needsRedraw or lastRedraw here - let the main logic handle it
   DEBUG_PRINTLN(F("[GC9A01] Display waking - setting displayTurnedOff = false"));
 }
 
@@ -600,19 +606,22 @@ bool UsermodGC9A01Display::readFromConfig(JsonObject& root) {
   }
 
   displayEnabled = top[FPSTR("enabled")] | displayEnabled;
-  displayTimeout = top[FPSTR("timeout")] | displayTimeout;
+  // Convert seconds from UI to milliseconds for internal use
+  uint16_t timeoutSeconds = top[FPSTR("timeout")] | (displayTimeout / 1000);
+  displayTimeout = timeoutSeconds * 1000;
   return true;
 }
 
 void UsermodGC9A01Display::addToConfig(JsonObject& root) {
   JsonObject top = root.createNestedObject(FPSTR("GC9A01"));
   top[FPSTR("enabled")] = displayEnabled;
-  top[FPSTR("timeout")] = displayTimeout;
+  // Convert milliseconds to seconds for UI display
+  top[FPSTR("timeout")] = displayTimeout / 1000;
 }
 
 void UsermodGC9A01Display::appendConfigData() {
   oappend(SET_F("addInfo('GC9A01:enabled', 1, 'Enable/disable display');"));
-  oappend(SET_F("addInfo('GC9A01:timeout', 1, 'Display timeout in ms (0=disabled)');"));
+  oappend(SET_F("addInfo('GC9A01:timeout', 1, 'Display timeout in seconds (0=disabled)');"));
 }
 
 uint16_t UsermodGC9A01Display::getId() {
