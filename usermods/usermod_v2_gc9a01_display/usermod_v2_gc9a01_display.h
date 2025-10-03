@@ -36,23 +36,33 @@ class UsermodGC9A01Display : public Usermod {
     bool displayTurnedOff = false;
     bool showingWelcomeScreen = true;
     unsigned long welcomeScreenStartTime = 0;
-    unsigned long lastUpdate = 0;
-    unsigned long lastRedraw = 0;
-    unsigned long lastDebugPrint = 0;
     uint8_t brightness = 255;
     uint16_t displayTimeout = 60000; // 60 seconds
     
-    String currentEffectName = "";
-    uint8_t currentBrightness = 0;
-    bool currentPowerState = false;
+    // Proper state tracking like 4-line display usermod
+    uint8_t knownBrightness = 255;
+    uint8_t knownMode = 255;
+    uint8_t knownPalette = 255;
+    uint32_t knownColor = 0;
+    uint32_t knownBgColor = 0;
+    bool knownPowerState = true;
+    unsigned long nextUpdate = 0;
+    unsigned long lastRedraw = 0; // Track last redraw time for timeout
+    uint16_t refreshRate = 1000; // Update every 1000ms aligned with 4-line display
+    
+    // Time tracking for display updates
+    uint8_t knownMinute = 99;
+    uint8_t knownHour = 99;
     
     bool encoderEnabled = false;
     
     // Private method declarations
     void initDisplay();
     void updateDisplay();
+    void drawMainInterface();
     void drawMainScreen();
     void drawStatusBar();
+    void drawWLEDLogo();
     void setBrightness(uint8_t bri);
     void sleepDisplay();
     void wakeDisplay();
