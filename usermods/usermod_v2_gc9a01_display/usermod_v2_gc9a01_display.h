@@ -63,6 +63,7 @@ class UsermodGC9A01Display : public Usermod {
     void drawMainScreen();
     void drawStatusBar();
     void drawWLEDLogo();
+    void drawWiFiIcon(int x, int y, bool connected, int rssi = 0);
     void setBrightness(uint8_t bri);
     void sleepDisplay();
     void wakeDisplay();

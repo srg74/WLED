@@ -28,13 +28,19 @@ void UsermodGC9A01Display::initDisplay() {
   // Set welcome screen timer for non-blocking transition to main interface
   showingWelcomeScreen = true;
   welcomeScreenStartTime = millis();
+  
+  // Ensure display is marked as active (not turned off)
+  displayTurnedOff = false;
+  DEBUG_PRINTLN(F("[GC9A01] Display marked as active"));
 }
 
 void UsermodGC9A01Display::updateDisplay() {
-  if (!displayEnabled || displayTurnedOff) {
-    DEBUG_PRINTF("[GC9A01] Update blocked - enabled: %d, turnedOff: %d\n", displayEnabled, displayTurnedOff);
+  if (!displayEnabled) {
+    DEBUG_PRINTLN(F("[GC9A01] Display disabled - skipping update"));
     return;
   }
+  
+  DEBUG_PRINTLN(F("[GC9A01] updateDisplay() called - checking for changes"));
   
   // Rate limiting like 4-line display usermod
   unsigned long now = millis();
@@ -110,7 +116,7 @@ void UsermodGC9A01Display::updateDisplay() {
   if (!needsRedraw && displayTimeout > 0) {
     // Turn off display after timeout with no change
     if (!displayTurnedOff && (now - lastRedraw > displayTimeout)) {
-      DEBUG_PRINTF("[GC9A01] Display timeout - going to sleep (no change for %lu ms)\n", now - lastRedraw);
+      DEBUG_PRINTF("[GC9A01] Display timeout - going to sleep (no change for %lu ms, timeout: %u ms)\n", now - lastRedraw, displayTimeout);
       sleepDisplay();
       return;
     }
@@ -127,6 +133,7 @@ void UsermodGC9A01Display::updateDisplay() {
     lastRedraw = now; // Update last redraw timestamp
     DEBUG_PRINTLN(F("[GC9A01] State changed - updating display"));
     drawMainInterface();
+    needsRedraw = false; // Reset the flag after drawing
   } else {
     DEBUG_PRINTF("[GC9A01] No changes detected (last redraw: %lu ms ago)\n", now - lastRedraw);
   }
@@ -195,15 +202,13 @@ void UsermodGC9A01Display::drawMainInterface() {
   
   // WiFi icon at top
   tft.setTextDatum(MC_DATUM);
-  if (WiFi.status() == WL_CONNECTED) {
-    tft.fillCircle(120, 40, 12, TFT_DARKGREEN);
-    tft.setTextColor(TFT_WHITE, TFT_DARKGREEN);
-    tft.drawString("WiFi", 120, 40, 1);
-  } else {
-    tft.fillCircle(120, 40, 12, TFT_DARKGREY);
-    tft.setTextColor(TFT_WHITE, TFT_DARKGREY);
-    tft.drawString("WiFi", 120, 40, 1);
-  }
+  bool wifiConnected = (WiFi.status() == WL_CONNECTED);
+  int wifiRSSI = wifiConnected ? WiFi.RSSI() : -100;
+  
+  // Use blue background to match the screen bezel
+  tft.fillCircle(120, 40, 12, TFT_BLUE);
+  
+  drawWiFiIcon(120, 38, wifiConnected, wifiRSSI);
   
   // Time display (large, centered-top)
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -223,25 +228,42 @@ void UsermodGC9A01Display::drawMainInterface() {
     if (currentMinute < 10) timeStr += "0";
     timeStr += String(currentMinute);
   }
-  tft.drawString(timeStr, 120, 80, 4); // Large font
+  tft.drawString(timeStr, 120, 95, 6); // Bigger font (6) and moved down 15px total
   
-  // Power status - get actual WLED state
+  // Power switch - redesigned as "OFF [switch] ON" layout
   bool powerState = (bri > 0);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextDatum(MC_DATUM);
+  
+  // Switch background and knob
   if (powerState) {
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString("ON", 120, 130, 2);
-    
     // Green toggle switch (ON position)
-    tft.fillRoundRect(105, 145, 30, 15, 7, TFT_GREEN);
-    tft.fillCircle(125, 152, 6, TFT_WHITE); // Toggle knob (right position = ON)
-  } else {
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString("OFF", 120, 130, 2);
+    tft.fillRoundRect(105, 123, 30, 15, 7, TFT_GREEN);
+    tft.fillCircle(125, 130, 6, TFT_WHITE); // Toggle knob (right position = ON)
     
-    // Red toggle switch (OFF position)
-    tft.fillRoundRect(105, 145, 30, 15, 7, TFT_RED);
-    tft.fillCircle(115, 152, 6, TFT_WHITE); // Toggle knob (left position = OFF)
+    // Show "ON" on the right side when device is ON
+    tft.drawString("ON", 150, 130, 2);
+  } else {
+    // Red toggle switch (OFF position)  
+    tft.fillRoundRect(105, 123, 30, 15, 7, TFT_RED);
+    tft.fillCircle(115, 130, 6, TFT_WHITE); // Toggle knob (left position = OFF)
+    
+    // Show "OFF" on the left side when device is OFF
+    tft.drawString("OFF", 90, 130, 2);
   }
+  
+  // CSL2 button (tertiary color) - at old switch position
+  uint32_t csl2Color = strip.getMainSegment().colors[2]; // csl2 - Tertiary color
+  uint8_t csl2_r = (csl2Color >> 16) & 0xFF;
+  uint8_t csl2_g = (csl2Color >> 8) & 0xFF;
+  uint8_t csl2_b = csl2Color & 0xFF;
+  uint16_t csl2Color565 = tft.color565(csl2_r, csl2_g, csl2_b);
+  
+  tft.setTextDatum(TL_DATUM); // Left align for label
+  tft.drawString("CS", 94, 154, 2); // Label positioned like FX/BG (4px left, proper alignment)
+  tft.setTextDatum(MC_DATUM); // Restore center alignment for other elements
+  tft.fillCircle(120, 162, 8, csl2Color565);
+  tft.drawCircle(120, 162, 8, TFT_WHITE);
   
   // Effect name - moved to higher position
   tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -291,14 +313,14 @@ void UsermodGC9A01Display::drawMainInterface() {
   // FX indicator at 7:30 position (225 degrees)
   int fx_x = 120 + 90 * cos(radians(225 - 90)); // -90 to adjust for top reference
   int fx_y = 120 + 90 * sin(radians(225 - 90));
-  tft.drawString("FX", fx_x, fx_y - 15, 1);
+  tft.drawString("FX", fx_x, fx_y - 15, 2);
   tft.fillCircle(fx_x, fx_y, 8, fxColor565);
   tft.drawCircle(fx_x, fx_y, 8, TFT_WHITE);
   
   // BG indicator at 4:30 position (135 degrees)  
   int bg_x = 120 + 90 * cos(radians(135 - 90)); // -90 to adjust for top reference
   int bg_y = 120 + 90 * sin(radians(135 - 90));
-  tft.drawString("BG", bg_x, bg_y - 15, 1);
+  tft.drawString("BG", bg_x, bg_y - 15, 2);
   tft.fillCircle(bg_x, bg_y, 8, bgColor565);
   tft.drawCircle(bg_x, bg_y, 8, TFT_WHITE);
   
@@ -378,21 +400,66 @@ void UsermodGC9A01Display::drawMainScreen() {
 void UsermodGC9A01Display::drawStatusBar() {
   // WiFi status (top left arc position)
   tft.setTextDatum(TL_DATUM);  // Top Left datum for status items
-  if (WiFi.status() == WL_CONNECTED) {
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.fillCircle(50, 50, 8, TFT_DARKGREEN);
-    tft.drawString("WiFi", 65, 45, 1);
-  } else {
-    tft.setTextColor(TFT_RED, TFT_BLACK);
-    tft.fillCircle(50, 50, 8, TFT_MAROON);
-    tft.drawString("No WiFi", 65, 45, 1);
-  }
+  bool wifiConnected = (WiFi.status() == WL_CONNECTED);
+  int wifiRSSI = wifiConnected ? WiFi.RSSI() : -100;
+  
+  // Use blue background to match the screen bezel
+  tft.fillCircle(50, 50, 8, TFT_BLUE);
+  
+  drawWiFiIcon(50, 48, wifiConnected, wifiRSSI);
   
   // Time display (top right arc position)
   tft.setTextDatum(TR_DATUM);  // Top Right datum
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawString("Time", 190, 45, 1);
   tft.fillCircle(190, 50, 6, TFT_BLUE);
+}
+
+void UsermodGC9A01Display::drawWiFiIcon(int x, int y, bool connected, int rssi) {
+  // Draw WiFi icon as signal strength bars (like mobile phone signal)
+  // More recognizable than arcs on small displays
+  
+  uint16_t strongColor, weakColor;
+  int signalStrength = 0;
+  
+  if (connected) {
+    strongColor = TFT_WHITE;
+    weakColor = TFT_DARKGREY;
+    
+    // Convert RSSI to signal strength (0-4 bars)
+    if (rssi >= -50) signalStrength = 4;      // Excellent (100%)
+    else if (rssi >= -60) signalStrength = 3; // Good (75%)
+    else if (rssi >= -70) signalStrength = 2; // Fair (50%)
+    else if (rssi >= -80) signalStrength = 1; // Poor (25%)
+    else signalStrength = 0;                  // Very poor
+  } else {
+    strongColor = TFT_DARKGREY;
+    weakColor = TFT_DARKGREY;
+    signalStrength = 0;
+  }
+  
+  // Draw 4 signal bars of increasing height (like phone signal indicator)
+  // Bar 1 (shortest, leftmost)
+  uint16_t bar1Color = (signalStrength >= 1) ? strongColor : weakColor;
+  tft.fillRect(x - 6, y + 6, 2, 2, bar1Color);
+  
+  // Bar 2
+  uint16_t bar2Color = (signalStrength >= 2) ? strongColor : weakColor;
+  tft.fillRect(x - 3, y + 4, 2, 4, bar2Color);
+  
+  // Bar 3
+  uint16_t bar3Color = (signalStrength >= 3) ? strongColor : weakColor;
+  tft.fillRect(x, y + 2, 2, 6, bar3Color);
+  
+  // Bar 4 (tallest, rightmost)
+  uint16_t bar4Color = (signalStrength >= 4) ? strongColor : weakColor;
+  tft.fillRect(x + 3, y, 2, 8, bar4Color);
+  
+  // Draw X if disconnected
+  if (!connected) {
+    tft.drawLine(x - 6, y, x + 6, y + 8, TFT_RED);
+    tft.drawLine(x + 6, y, x - 6, y + 8, TFT_RED);
+  }
 }
 
 void UsermodGC9A01Display::drawWLEDLogo() {
@@ -445,7 +512,7 @@ void UsermodGC9A01Display::setBrightness(uint8_t bri) {
 void UsermodGC9A01Display::sleepDisplay() {
   digitalWrite(GC9A01_BL_PIN, LOW);
   displayTurnedOff = true;
-  DEBUG_PRINTLN(F("GC9A01: Display sleeping"));
+  DEBUG_PRINTLN(F("[GC9A01] Display sleeping - setting displayTurnedOff = true"));
 }
 
 void UsermodGC9A01Display::wakeDisplay() {
@@ -453,7 +520,7 @@ void UsermodGC9A01Display::wakeDisplay() {
   displayTurnedOff = false;
   needsRedraw = true;
   lastRedraw = millis(); // Reset timeout when waking up
-  DEBUG_PRINTLN(F("GC9A01: Display waking"));
+  DEBUG_PRINTLN(F("[GC9A01] Display waking - setting displayTurnedOff = false"));
 }
 
 // Public method implementations (Usermod interface)
@@ -481,9 +548,19 @@ void UsermodGC9A01Display::setup() {
 }
 
 void UsermodGC9A01Display::loop() {
-  // Simple loop like 4-line display usermod - minimal work here
-  if (!displayEnabled || strip.isUpdating()) return;
+  if (!displayEnabled) return;
+  
+  // Commented out auto-wake to debug cycling issue
+  // if (displayTurnedOff && strip.isUpdating()) {
+  //   DEBUG_PRINTLN(F("[GC9A01] Auto-wake triggered by strip activity"));
+  //   wakeDisplay();
+  // }
+  
+  unsigned long now = millis();
+  if (now - nextUpdate < 500) return; // 500ms refresh rate for responsiveness
+  
   updateDisplay();
+  nextUpdate = now;
 }
 
 void UsermodGC9A01Display::addToJsonInfo(JsonObject& root) {
