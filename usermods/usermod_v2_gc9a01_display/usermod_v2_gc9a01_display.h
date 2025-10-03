@@ -48,7 +48,7 @@ class UsermodGC9A01Display : public Usermod {
     bool knownPowerState = true;
     unsigned long nextUpdate = 0;
     unsigned long lastRedraw = 0; // Track last redraw time for timeout
-    uint16_t refreshRate = 1000; // Update every 1000ms aligned with 4-line display
+    uint16_t refreshRate = 500; // Reduced to 500ms for better responsiveness
     
     // Time tracking for display updates
     uint8_t knownMinute = 99;

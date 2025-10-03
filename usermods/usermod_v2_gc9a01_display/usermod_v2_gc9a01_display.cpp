@@ -31,12 +31,17 @@ void UsermodGC9A01Display::initDisplay() {
 }
 
 void UsermodGC9A01Display::updateDisplay() {
-  if (!displayEnabled || displayTurnedOff) return;
+  if (!displayEnabled || displayTurnedOff) {
+    DEBUG_PRINTF("[GC9A01] Update blocked - enabled: %d, turnedOff: %d\n", displayEnabled, displayTurnedOff);
+    return;
+  }
   
   // Rate limiting like 4-line display usermod
   unsigned long now = millis();
   if (now < nextUpdate) return;
   nextUpdate = now + refreshRate;
+  
+  DEBUG_PRINTLN(F("[GC9A01] updateDisplay() called - checking for changes"));
   
   bool needsRedraw = false;
   
@@ -59,8 +64,11 @@ void UsermodGC9A01Display::updateDisplay() {
     needsRedraw = true;
   }
   
-  if (knownMode != effectCurrent) {
-    knownMode = effectCurrent;
+  // Check for effect mode changes
+  uint8_t currentMode = strip.getMainSegment().mode; // Get mode from main segment
+  if (knownMode != currentMode) {
+    DEBUG_PRINTF("[GC9A01] Effect changed: %d -> %d\n", knownMode, currentMode);
+    knownMode = currentMode;
     needsRedraw = true;
   }
   
@@ -102,7 +110,7 @@ void UsermodGC9A01Display::updateDisplay() {
   if (!needsRedraw && displayTimeout > 0) {
     // Turn off display after timeout with no change
     if (!displayTurnedOff && (now - lastRedraw > displayTimeout)) {
-      DEBUG_PRINTLN(F("[GC9A01] Display timeout - going to sleep"));
+      DEBUG_PRINTF("[GC9A01] Display timeout - going to sleep (no change for %lu ms)\n", now - lastRedraw);
       sleepDisplay();
       return;
     }
@@ -110,9 +118,17 @@ void UsermodGC9A01Display::updateDisplay() {
 
   // Only redraw if something actually changed
   if (needsRedraw) {
+    // Wake display if it was sleeping and there are changes
+    if (displayTurnedOff) {
+      DEBUG_PRINTLN(F("[GC9A01] Waking display due to changes"));
+      wakeDisplay();
+    }
+    
     lastRedraw = now; // Update last redraw timestamp
     DEBUG_PRINTLN(F("[GC9A01] State changed - updating display"));
     drawMainInterface();
+  } else {
+    DEBUG_PRINTF("[GC9A01] No changes detected (last redraw: %lu ms ago)\n", now - lastRedraw);
   }
 }
 
@@ -458,6 +474,10 @@ void UsermodGC9A01Display::setup() {
   DEBUG_PRINTLN(F("[GC9A01] Display initialization complete"));
   needsRedraw = true;
   lastRedraw = millis(); // Initialize timeout tracking
+  
+  // Initialize known values to force initial update
+  knownMode = 255; // Force initial effect name update
+  knownBrightness = 255; // Force initial brightness update
 }
 
 void UsermodGC9A01Display::loop() {
