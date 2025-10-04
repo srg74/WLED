@@ -49,7 +49,7 @@ void UsermodGC9A01Display::updateDisplay() {
   
   DEBUG_PRINTLN(F("[GC9A01] updateDisplay() called - checking for changes"));
   
-  bool needsRedraw = false;
+  bool needsRedraw = this->needsRedraw; // Start with any pending redraw request
   
   // Handle welcome screen transition (non-blocking)
   if (showingWelcomeScreen && (now - welcomeScreenStartTime > 2000)) { // Show logo for 2 seconds
@@ -140,7 +140,7 @@ void UsermodGC9A01Display::updateDisplay() {
     DEBUG_PRINTLN(F("[GC9A01] State changed - updating display"));
     drawMainInterface();
     lastRedraw = now; // Update timestamp only after successful draw
-    needsRedraw = false; // Reset the flag after drawing
+    this->needsRedraw = false; // Reset both flags after drawing
   } else {
     DEBUG_PRINTF("[GC9A01] No changes detected (last redraw: %lu ms ago)\n", now - lastRedraw);
   }
@@ -177,33 +177,33 @@ void UsermodGC9A01Display::drawMainInterface() {
   float arcLength = 240;  // Total arc length in degrees
   float progressAngle = map(brightnessPercent, 0, 100, 0, arcLength);
   
-  // Draw brightness progress ring in white
-  for (float angle = 0; angle < progressAngle; angle += 3) {
-    float currentAngle = startAngle + angle;
-    float rad = radians(currentAngle - 90); // Convert to radians, adjust for top reference
-    
-    // Brightness ring (radius 108-104, 5px wide)
-    for (int ringWidth = 0; ringWidth < 5; ringWidth++) {
-      int radius = 108 - ringWidth;
-      int x = 120 + radius * cos(rad);
-      int y = 120 + radius * sin(rad);
-      
-      if (brightnessPercent > 0) {
-        tft.drawPixel(x, y, TFT_WHITE);
-      }
-    }
-  }
-  
-  // Draw background (unfilled) part of the arc in dark grey
-  for (float angle = progressAngle; angle < arcLength; angle += 3) {
+  // First: Draw grey section markers across entire arc (240°)
+  for (float angle = 0; angle < arcLength; angle += 3) {
     float currentAngle = startAngle + angle;
     float rad = radians(currentAngle - 90);
     
+    // Grey section markers (radius 108-104, 5px wide)
     for (int ringWidth = 0; ringWidth < 5; ringWidth++) {
       int radius = 108 - ringWidth;
       int x = 120 + radius * cos(rad);
       int y = 120 + radius * sin(rad);
       tft.drawPixel(x, y, TFT_DARKGREY);
+    }
+  }
+  
+  // Second: Draw solid white arc that overlaps and hides grey markers as it progresses
+  if (brightnessPercent > 0) {
+    for (float angle = 0; angle < progressAngle; angle += 1) { // Continuous fill (angle += 1)
+      float currentAngle = startAngle + angle;
+      float rad = radians(currentAngle - 90);
+      
+      // Solid white progress arc (radius 108-104, 5px wide)
+      for (int ringWidth = 0; ringWidth < 5; ringWidth++) {
+        int radius = 108 - ringWidth;
+        int x = 120 + radius * cos(rad);
+        int y = 120 + radius * sin(rad);
+        tft.drawPixel(x, y, TFT_WHITE);
+      }
     }
   }
   
@@ -215,7 +215,7 @@ void UsermodGC9A01Display::drawMainInterface() {
   // Use blue background to match the screen bezel
   tft.fillCircle(120, 40, 12, TFT_BLUE);
   
-  drawWiFiIcon(120, 38, wifiConnected, wifiRSSI);
+  drawWiFiIcon(120, 36, wifiConnected, wifiRSSI); // Moved up 2px (was 38)
   
   // Time display (large, centered-top)
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -336,6 +336,12 @@ void UsermodGC9A01Display::drawMainInterface() {
   String brightStr = String(brightnessPercent) + "%";
   tft.drawString(brightStr, 120, 210, 2); // Now at Y=210 (was effect position)
   
+  // Draw mode indicator (small, subtle)
+  drawCurrentModeIndicator();
+  
+  // Draw overlay if active (this should be last to appear on top)
+  drawModeOverlay();
+  
   DEBUG_PRINTF("[GC9A01] Single ring interface - brightness: %d%%, FX: R%d G%d B%d, BG: R%d G%d B%d, power: %s\n", 
                 brightnessPercent, fx_r, fx_g, fx_b, bg_r, bg_g, bg_b, powerState ? "ON" : "OFF");
 }
@@ -413,7 +419,7 @@ void UsermodGC9A01Display::drawStatusBar() {
   // Use blue background to match the screen bezel
   tft.fillCircle(50, 50, 8, TFT_BLUE);
   
-  drawWiFiIcon(50, 48, wifiConnected, wifiRSSI);
+  drawWiFiIcon(50, 46, wifiConnected, wifiRSSI); // Moved up 2px (was 48)
   
   // Time display (top right arc position)
   tft.setTextDatum(TR_DATUM);  // Top Right datum
@@ -522,11 +528,66 @@ void UsermodGC9A01Display::sleepDisplay() {
   DEBUG_PRINTLN(F("[GC9A01] Display sleeping - setting displayTurnedOff = true"));
 }
 
-void UsermodGC9A01Display::wakeDisplay() {
-  digitalWrite(TFT_BL, HIGH);
-  displayTurnedOff = false;
-  // Don't set needsRedraw or lastRedraw here - let the main logic handle it
-  DEBUG_PRINTLN(F("[GC9A01] Display waking - setting displayTurnedOff = false"));
+// Rotary encoder integration methods
+void UsermodGC9A01Display::checkEncoderState() {
+  // This method is no longer needed - rotary encoder usermod handles everything
+  // We'll implement the interface methods that rotary encoder usermod calls
+}
+
+void UsermodGC9A01Display::showOverlay(const char* text, unsigned long duration) {
+  overlayText = String(text);
+  overlayActive = true;
+  overlayStartTime = millis();
+  overlayDuration = duration;
+  needsRedraw = true;
+  
+  // Wake display if sleeping (matching 4-line display pattern)
+  if (displayTurnedOff) {
+    wakeDisplayFromSleep();
+  }
+}
+
+void UsermodGC9A01Display::clearOverlay() {
+  if (overlayActive) {
+    overlayActive = false;
+    needsRedraw = true;
+  }
+}
+
+bool UsermodGC9A01Display::wakeDisplayFromSleep() {
+  if (displayTurnedOff) {
+    digitalWrite(TFT_BL, HIGH);
+    displayTurnedOff = false;
+    needsRedraw = true;
+    DEBUG_PRINTLN(F("[GC9A01] Display waking from encoder activity"));
+    return true; // Was sleeping
+  }
+  return false; // Was already awake
+}
+
+// Interface methods for rotary encoder usermod (matching 4-line display pattern)
+bool UsermodGC9A01Display::wakeDisplay() {
+  return wakeDisplayFromSleep(); // Return true if was sleeping
+}
+
+void UsermodGC9A01Display::updateRedrawTime() {
+  lastRedraw = millis(); // Prevent display timeout and mark as recently active
+  // Don't immediately set needsRedraw - let the natural loop handle updates
+  // This prevents excessive redraws during rapid encoder changes
+}
+
+void UsermodGC9A01Display::overlay(const char* line1, long showHowLong, byte glyphType) {
+  // Match 4-line display interface - ignore glyph for now
+  showOverlay(line1, showHowLong);
+  updateRedrawTime(); // Mark as active and request update
+}
+
+void UsermodGC9A01Display::redraw(bool forceRedraw) {
+  if (forceRedraw) {
+    needsRedraw = true;
+  }
+  // Don't call updateDisplay() immediately - let the main loop handle it
+  // This prevents flickering during rapid encoder changes
 }
 
 // Public method implementations (Usermod interface)
@@ -542,6 +603,13 @@ void UsermodGC9A01Display::setup() {
   #ifdef USERMOD_ROTARY_ENCODER_UI_ALT
     encoderEnabled = true;
     DEBUG_PRINTLN(F("[GC9A01] Rotary encoder integration enabled"));
+    
+    // Initialize button pin if available
+    int8_t buttonPin = getEncoderButtonPin();
+    if (buttonPin >= 0) {
+      pinMode(buttonPin, INPUT_PULLUP);
+      DEBUG_PRINTF("[GC9A01] Encoder button pin %d configured\n", buttonPin);
+    }
   #endif
   
   DEBUG_PRINTLN(F("[GC9A01] Display initialization complete"));
@@ -551,20 +619,28 @@ void UsermodGC9A01Display::setup() {
   // Initialize known values to force initial update
   knownMode = 255; // Force initial effect name update
   knownBrightness = 255; // Force initial brightness update
+  
+  // Variables for rotary encoder integration 
+  knownEffectSpeed = 255;
+  knownEffectIntensity = 255;
+  knownHue = 65535;
+  knownSaturation = 255;
+  knownCCT = 65535;
+  knownPreset = 255;
 }
 
 void UsermodGC9A01Display::loop() {
   if (!displayEnabled) return;
   
-  // Commented out auto-wake to debug cycling issue
-  // if (displayTurnedOff && strip.isUpdating()) {
-  //   DEBUG_PRINTLN(F("[GC9A01] Auto-wake triggered by strip activity"));
-  //   wakeDisplay();
-  // }
-  
   unsigned long now = millis();
-  if (now - nextUpdate < 500) return; // 500ms refresh rate for responsiveness
   
+  // Use adaptive refresh rate - faster when recently updated, slower when idle
+  unsigned long timeSinceLastRedraw = now - lastRedraw;
+  unsigned long refreshInterval = (timeSinceLastRedraw < 5000) ? 250 : 500; // 250ms if recently active, 500ms if idle
+  
+  if (now - nextUpdate < refreshInterval) return;
+  
+  // Rotary encoder usermod handles button presses - we just update display
   updateDisplay();
   nextUpdate = now;
 }
@@ -624,12 +700,34 @@ void UsermodGC9A01Display::appendConfigData() {
   oappend(SET_F("addInfo('GC9A01:timeout', 1, 'Display timeout in seconds (0=disabled)');"));
 }
 
+uint8_t UsermodGC9A01Display::getCurrentEncoderMode() {
+  // For rotary encoder integration
+  return 0; // Mode 0 = brightness, etc.
+}
+
+const char* UsermodGC9A01Display::getEncoderModeName(uint8_t mode) {
+  // For rotary encoder integration
+  const char* modeNames[] = {"Brightness", "Effect", "Speed", "Intensity", "Palette"};
+  if (mode < 5) return modeNames[mode];
+  return "Unknown";
+}
+
+void UsermodGC9A01Display::drawCurrentModeIndicator() {
+  // Optional: Draw indicator for current encoder mode
+  // This method can be empty if not needed
+}
+
+void UsermodGC9A01Display::drawModeOverlay() {
+  // Optional: Draw overlay for current mode
+  // This method can be empty if not needed
+}
+
 uint16_t UsermodGC9A01Display::getId() {
   return USERMOD_ID_GC9A01_DISPLAY;
 }
 
-#endif // USERMOD_GC9A01_DISPLAY
-
 // Registration
 UsermodGC9A01Display gc9a01DisplayUsermod;
 REGISTER_USERMOD(gc9a01DisplayUsermod);
+
+#endif // USERMOD_GC9A01_DISPLAY

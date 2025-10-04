@@ -60,6 +60,21 @@ class UsermodGC9A01Display : public Usermod {
     
     bool encoderEnabled = false;
     
+    // Integration with rotary encoder usermod (no direct pin handling)
+    uint8_t lastKnownEncoderMode = 255; // Track encoder mode changes
+    bool overlayActive = false;
+    unsigned long overlayStartTime = 0;
+    unsigned long overlayDuration = 750;
+    String overlayText = "";
+    
+    // Known values for tracking encoder-controlled parameters
+    uint8_t knownEffectSpeed = 255;
+    uint8_t knownEffectIntensity = 255;
+    uint16_t knownHue = 65535;
+    uint8_t knownSaturation = 255;
+    uint16_t knownCCT = 65535;
+    uint8_t knownPreset = 255;
+    
     // Private method declarations
     void initDisplay();
     void updateDisplay();
@@ -70,9 +85,30 @@ class UsermodGC9A01Display : public Usermod {
     void drawWiFiIcon(int x, int y, bool connected, int rssi = 0);
     void setBrightness(uint8_t bri);
     void sleepDisplay();
-    void wakeDisplay();
+    
+    // Integration with rotary encoder usermod (matching 4-line display interface)
+    void checkEncoderState();
+    void showOverlay(const char* text, unsigned long duration = 750);
+    void clearOverlay();
+    bool wakeDisplayFromSleep(); // Return true if display was sleeping
+    
+    // Mode-specific drawing methods
+    void drawModeOverlay();
+    void drawCurrentModeIndicator();
+    
+    // Get encoder state from rotary encoder usermod
+    uint8_t getCurrentEncoderMode();
+    const char* getEncoderModeName(uint8_t mode);
 
   public:
+    
+    // Public interface methods for rotary encoder usermod (like 4-line display)
+    bool wakeDisplay(); // Return true if was sleeping
+    void updateRedrawTime(); // Prevent display timeout
+    void overlay(const char* line1, long showHowLong, byte glyphType = 0); // Match 4-line interface
+    void redraw(bool forceRedraw); // Force display update
+    
+    // Usermod API
     // Public method declarations (Usermod interface)
     void setup() override;
     void loop() override;
