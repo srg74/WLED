@@ -118,12 +118,13 @@ bool deserializeConfig(JsonObject doc, bool fromFS) {
     }
   }
 
-  #ifdef WLED_USE_ETHERNET
+  // https://github.com/wled/WLED/issues/5247
+#ifdef WLED_USE_ETHERNET
   JsonObject ethernet = doc[F("eth")];
   CJSON(ethernetType, ethernet["type"]);
   // NOTE: Ethernet configuration takes priority over other use of pins
   initEthernet();
-  #endif
+#endif
 
   JsonObject ap = doc["ap"];
   getStringFromJson(apSSID, ap[F("ssid")], 33);
