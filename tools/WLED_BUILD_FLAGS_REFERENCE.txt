@@ -1,0 +1,336 @@
+================================================================================
+WLED BUILD FLAGS REFERENCE
+Comprehensive list of all -D preprocessor flags available for WLED builds
+================================================================================
+
+TABLE OF CONTENTS
+1. Feature Disable Flags
+2. Feature Enable Flags
+3. Configuration Value Flags
+4. Hardware Pin Flags
+5. Currently Used Flags
+6. Recommended Unused Flags
+7. Usage Examples
+
+================================================================================
+1. FEATURE DISABLE FLAGS (prefix: -D WLED_DISABLE_)
+================================================================================
+
+Flag                                    Purpose                         Saves
+-D WLED_DISABLE_ALEXA                  Amazon Alexa voice control      ~11kb
+-D WLED_DISABLE_HUESYNC                Philips Hue sync                ~4kb
+-D WLED_DISABLE_INFRARED               IR remote control               ~12kb
+-D WLED_DISABLE_MQTT                   MQTT protocol                   ~12kb
+-D WLED_DISABLE_ADALIGHT               Serial Adalight/TPM2 protocols  ~5kb
+-D WLED_DISABLE_LOXONE                 Loxone integration              ~1.2kb
+-D WLED_DISABLE_WEBSOCKETS             WebSocket support               varies
+-D WLED_DISABLE_OTA                    Over-the-air updates            ~14kb
+-D WLED_DISABLE_2D                     2D LED matrix effects           varies
+-D WLED_DISABLE_ESPNOW                 ESP-NOW wireless protocol       varies
+-D WLED_DISABLE_PARTICLESYSTEM1D       1D particle effects             varies
+-D WLED_DISABLE_PARTICLESYSTEM2D       2D particle effects             varies
+-D WLED_DISABLE_BROWNOUT_DET           ESP32 brownout detection        -
+-D WLED_DISABLE_FILESYSTEM             Filesystem support              varies
+-D WLED_DISABLE_PIXELFORGE             PixelForge features             varies
+-D WLED_DISABLE_BLYNK                  Blynk integration (legacy)       varies
+
+================================================================================
+2. FEATURE ENABLE FLAGS (prefix: -D WLED_ENABLE_)
+================================================================================
+
+Flag                                    Purpose
+-D WLED_ENABLE_AOTA                     Async OTA updates
+-D WLED_ENABLE_DMX                      DMX512 protocol (3.5kb)
+-D WLED_ENABLE_DMX_INPUT                DMX input mode
+-D WLED_ENABLE_DMX_OUTPUT               DMX output mode
+-D WLED_ENABLE_GIF                      GIF animation support
+-D WLED_ENABLE_JSONLIVE                 JSON live peek (if WebSockets disabled)
+-D WLED_ENABLE_WEBSOCKETS              WebSocket support
+-D WLED_ENABLE_LOXONE                   Loxone integration
+-D WLED_ENABLE_ADALIGHT                Adalight serial protocol
+-D WLED_ENABLE_FS_EDITOR                /edit filesystem editor page
+-D WLED_ENABLE_HUB75MATRIX              HUB75 LED matrix support
+-D WLED_ENABLE_PIXART                   PixelArt features
+-D WLED_ENABLE_PXMAGIC                  PXMagic features
+-D WLED_ENABLE_USERMOD_PAGE             Usermod configuration page
+-D WLED_ENABLE_IC_CCT                   ICC CCT support
+-D WLED_ENABLE_AA_PIXELS                Anti-aliased pixels
+-D WLED_ENABLE_SIMPLE_UI                Simplified web UI
+-D WLED_AUTOSEGMENTS                    Automatic segment detection
+
+================================================================================
+3. CONFIGURATION VALUE FLAGS (prefix: -D WLED_)
+================================================================================
+
+String Value Flags:
+-D WLED_RELEASE_NAME="\"my_build\""     Custom release name
+-D WLED_BRAND="\"MyBrand\""             Custom brand name
+-D WLED_PRODUCT_NAME="\"MyDevice\""     Custom product name
+-D WLED_AP_SSID="\"MyAP\""              Access point SSID
+-D WLED_AP_PASS="\"password\""          Access point password
+-D WLED_OTA_PASS="\"password\""         OTA update password
+-D WLED_TIMEZONE="\"PST8PDT\""          Timezone string
+-D WLED_PIN=""                          Custom pin assignment
+
+Numeric Value Flags:
+-D WLED_AP_TIMEOUT=300000               AP timeout in milliseconds
+-D WLED_WATCHDOG_TIMEOUT=0              Watchdog timeout (0=disabled)
+-D WLED_UTC_OFFSET=0                    UTC offset in seconds
+-D WLED_NTP_ENABLED=1                   Enable NTP
+-D WLED_MAX_BUTTONS=32                  Maximum buttons
+-D WLED_MAX_LEDMAPS=16                  Maximum LED maps
+-D WLED_MAX_VIRTUAL_BUSSES=3            Maximum virtual buses
+-D WLED_MAX_WIFI_COUNT=3                Maximum WiFi networks
+-D WLED_MAX_USERMODS=6                  Maximum usermods
+-D WLED_PWM_FREQ=19531                  PWM frequency in Hz
+-D WLED_MAX_CUSTOM_PALETTES=255         Maximum custom palettes (ESP32)
+-D WLED_MAX_SEGNAME_LEN=64              Max segment name length
+-D WLED_HUB75_MAX_BRIGHTNESS=200        HUB75 max brightness
+
+Debug/Optimization Flags:
+-D WLED_DEBUG                           Enable debug output
+-D WLED_DEBUG_FS                        Debug filesystem operations
+-D WLED_DEBUG_NTP                       Debug NTP operations
+-D WLED_DEBUG_BUS                       Debug bus operations
+-D WLED_DEBUG_HOST                      Debug host operations
+-D WLED_DEBUG_PS                        Debug particle system
+-D WLED_SAVE_RAM                        Save RAM (disables some features)
+-D WLED_SAVE_IRAM                       Save instruction RAM
+-D WLED_USE_MY_CONFIG                   Use custom my_config.h file
+
+Hardware/Network Flags:
+-D WLED_USE_ETHERNET                    Use Ethernet instead of WiFi
+-D WLED_USE_IC_CCT                      Enable ICC CCT support
+-D WLED_USE_AA_PIXELS                   Enable anti-aliased pixels
+-D WLED_USE_SD_SPI                      Use SD card via SPI
+-D WLED_ETH_DEFAULT                     Default Ethernet board type
+-D WLED_ENABLE_FS_EDITOR                Enable filesystem editor
+
+================================================================================
+4. HARDWARE PIN FLAGS (ESP32/ESP8266 Specific)
+================================================================================
+
+GPIO Pin Assignment:
+-D DATA_PINS=16                         LED data pin (single)
+-D DATA_PINS=2,4,16,17                  LED data pins (multiple)
+-D BTNPIN=0                             Button pin
+-D IRPIN=4                              IR receiver pin
+-D IRPIN=-1                             Disable IR receiver
+-D RLYPIN=12                            Relay pin
+-D RLYPIN=-1                            Disable relay
+-D SERVERNAME='"esp32-wled"'            mDNS hostname
+
+I2C Display Pins:
+-D I2CSDAPIN=21                         I2C SDA pin
+-D I2CSCLPIN=22                         I2C SCL pin
+-D FLD_TYPE=SSD1306                     Display type (SSD1306, SH1106, etc.)
+
+SPI Display Pins:
+-D FLD_SPI_DEFAULT                      Use default SPI pins
+-D FLD_TYPE=SSD1309_SPI64               SPI display type
+-D HW_PIN_SCLKSPI=14                    SPI clock pin
+-D HW_PIN_MOSISPI=13                    SPI MOSI pin
+-D FLD_PIN_DC=26                        Display DC pin
+-D FLD_PIN_CS=15                        Display CS pin
+-D FLD_PIN_RESET=27                     Display reset pin
+
+Audio/I2S Pins:
+-D SR_DMTYPE=1                          DM type (audio reactive)
+-D I2S_SDPIN=32                         I2S SD pin
+-D I2S_WSPIN=15                         I2S WS pin
+-D I2S_CKPIN=14                         I2S CK pin
+-D MCLK_PIN=0                           Master clock pin
+
+Temperature Sensor Pins:
+-D TEMPERATURE_PIN=4                    Dallas DS18B20 pin
+
+Fan Control Pins:
+-D PWM_PIN=32                           PWM fan pin
+-D TACHO_PIN=33                         Tachometer pin
+
+Rotary Encoder Pins:
+-D ENCODER_DT_PIN=5                     Data pin
+-D ENCODER_CLK_PIN=18                   Clock pin
+-D ENCODER_SW_PIN=19                    Switch pin
+
+PIR Sensor Pins:
+-D PIR_SENSOR_PIN=14                    PIR sensor pin
+
+Relay Configuration:
+-D MULTI_RELAY_PINS=12,23,22,21         Multiple relay pins
+
+Audio Reactive Tuning:
+-D SR_DMTYPE=4                          DM type (audio Line-In shield)
+-D SR_SQUELCH=8                         Squelch level
+-D SR_GAIN=40                           Gain level
+-D SR_FREQ_PROF=1                       Frequency profile
+-D SR_LINE_DETECT=34                    Line detection pin
+
+Other Hardware:
+-D HW_PIN_SCL=35                        Hardware I2C SCL
+-D HW_PIN_SDA=33                        Hardware I2C SDA
+-D HW_PIN_CLOCKSPI=7                    Hardware SPI clock
+-D HW_PIN_DATASPI=11                    Hardware SPI data
+-D HW_PIN_MISOSPI=9                     Hardware SPI MISO
+-D PIXEL_COUNTS=100,100,100,100         Pixel counts per output
+-D ABL_MILLIAMPS_DEFAULT=1000           Power limit in milliamps
+
+================================================================================
+5. CURRENTLY USED FLAGS IN platformio_override.ini
+================================================================================
+
+The following flags are already actively used in your override configurations:
+
+-D WLED_RELEASE_NAME                    (custom build names)
+-D WLED_DISABLE_BLYNK                   (legacy Blynk)
+-D WLED_DISABLE_CRONIXIE                (Cronixie clock)
+-D WLED_DISABLE_HUESYNC                 (Philips Hue sync)
+-D WLED_DISABLE_LOXONE                  (Loxone integration)
+-D WLED_DISABLE_MQTT                    (MQTT protocol)
+-D WLED_DISABLE_ALEXA                   (Amazon Alexa)
+-D WLED_DISABLE_PARTICLESYSTEM1D        (1D particles)
+-D WLED_DISABLE_PARTICLESYSTEM2D        (2D particles)
+-D WLED_MAX_VIRTUAL_BUSSES              (bus limits)
+-D WLED_MAX_BUTTONS                     (button limits)
+-D WLED_WATCHDOG_TIMEOUT                (watchdog control)
+-D WLED_USE_ETHERNET                    (Ethernet support)
+-D WLED_ENABLE_DMX                      (DMX protocol)
+-D DATA_PINS                            (LED pins)
+-D BTNPIN                               (Button pin)
+-D IRPIN                                (IR pin)
+-D RLYPIN                               (Relay pin)
+-D SERVERNAME                           (mDNS name)
+-D WLED_BRAND                           (Custom brand)
+-D WLED_PRODUCT_NAME                    (Custom product name)
+-D WLED_DISABLE_INFRARED                (IR receiver)
+-D WLED_DISABLE_BROWNOUT_DET            (ESP32 brownout)
+-D WLED_ENABLE_AOTA                     (Async OTA)
+-D WLED_DEBUG                           (Debug output)
+
+================================================================================
+6. RECOMMENDED UNUSED FLAGS (Available for New Builds)
+================================================================================
+
+Performance Optimization:
+-D WLED_DISABLE_2D                      Remove 2D effects if not needed
+-D WLED_DISABLE_ESPNOW                  Remove ESP-NOW if not needed
+-D WLED_SAVE_RAM                        Optimize for RAM-limited devices
+-D WLED_SAVE_IRAM                       Save instruction RAM on ESP32
+
+Enhanced Features:
+-D WLED_ENABLE_AOTA                     Async OTA updates
+-D WLED_ENABLE_DMX_INPUT                DMX input functionality
+-D WLED_ENABLE_GIF                      GIF animation support
+-D WLED_ENABLE_HUB75MATRIX              HUB75 LED matrix support
+
+Time/Location Features:
+-D WLED_TIMEZONE="\"PST8PDT\""          Set default timezone
+-D WLED_UTC_OFFSET=0                    Set UTC offset
+-D WLED_NTP_ENABLED=1                   Enable NTP by default
+
+Debug Builds:
+-D WLED_DEBUG                           Full debug output
+-D WLED_DEBUG_FS                        Filesystem debugging
+-D WLED_DEBUG_NTP                       NTP debugging
+
+Simplified UI:
+-D WLED_ENABLE_SIMPLE_UI                Minimal web interface (embedded systems)
+
+================================================================================
+7. USAGE EXAMPLES
+================================================================================
+
+Example 1: Minimal ESP8266 Build
+build_flags = ${common.build_flags} ${esp8266.build_flags}
+  -D WLED_RELEASE_NAME="\"esp8266_minimal\""
+  -D WLED_DISABLE_OTA
+  -D WLED_DISABLE_MQTT
+  -D WLED_DISABLE_ALEXA
+  -D WLED_DISABLE_HUESYNC
+  -D WLED_DISABLE_INFRARED
+  -D WLED_DISABLE_2D
+  -D WLED_DISABLE_PARTICLESYSTEM1D
+  -D WLED_DISABLE_PARTICLESYSTEM2D
+  -D DATA_PINS=2
+  -D BTNPIN=0
+  -D IRPIN=-1
+
+Example 2: Full-Featured ESP32 Build
+build_flags = ${common.build_flags} ${esp32_idf_V4.build_flags}
+  -D WLED_RELEASE_NAME="\"esp32_full_featured\""
+  -D WLED_ENABLE_DMX
+  -D WLED_ENABLE_AOTA
+  -D WLED_ENABLE_HUB75MATRIX
+  -D WLED_DEBUG
+  -D DATA_PINS=16
+  -D BTNPIN=0
+  -D IRPIN=4
+  -D SERVERNAME='"wled-display"'
+
+Example 3: Audio-Reactive Build
+build_flags = ${common.build_flags} ${esp32_idf_V4.build_flags}
+  -D WLED_RELEASE_NAME="\"esp32_audio_reactive\""
+  -D SR_DMTYPE=1
+  -D I2S_SDPIN=32
+  -D I2S_WSPIN=15
+  -D I2S_CKPIN=14
+  -D SR_SQUELCH=5
+  -D SR_GAIN=30
+  -D SR_FREQ_PROF=5
+
+Example 4: Display + Rotary Encoder Build
+build_flags = ${common.build_flags} ${esp32_idf_V4.build_flags}
+  -D WLED_RELEASE_NAME="\"esp32_display_control\""
+  -D FLD_TYPE=SSD1306
+  -D I2CSDAPIN=21
+  -D I2CSCLPIN=22
+  -D ENCODER_DT_PIN=5
+  -D ENCODER_CLK_PIN=18
+  -D ENCODER_SW_PIN=19
+
+Example 5: Multi-Output Build
+build_flags = ${common.build_flags} ${esp32_idf_V4.build_flags}
+  -D WLED_RELEASE_NAME="\"esp32_multi_output\""
+  -D DATA_PINS=2,4,16,17
+  -D PIXEL_COUNTS=100,100,100,100
+  -D WLED_WATCHDOG_TIMEOUT=0
+
+Example 6: Ethernet Build
+build_flags = ${common.build_flags} ${esp32_idf_V4.build_flags}
+  -D WLED_RELEASE_NAME="\"esp32_ethernet\""
+  -D WLED_USE_ETHERNET
+  -D WLED_DISABLE_ALEXA
+  -D WLED_DISABLE_BLYNK
+  -D DATA_PINS=16
+
+================================================================================
+NOTES
+================================================================================
+
+1. String values must be wrapped with quotes:
+   Example: -D WLED_BRAND="\"MyBrand\""
+
+2. Multiple pins can be specified as comma-separated values:
+   Example: -D DATA_PINS=2,4,16,17
+
+3. Use -1 to disable pins:
+   Example: -D IRPIN=-1
+
+4. Memory savings are approximate and depend on configuration
+
+5. Some flags are mutually exclusive (enable/disable variants)
+
+6. Default flags are inherited from common.build_flags
+
+7. Platform-specific flags (esp8266.build_flags, esp32_idf_V4.build_flags) 
+   provide base configurations that should always be included
+
+8. For detailed descriptions of each flag, refer to:
+   - wled00/wled.h (feature flags)
+   - wled00/const.h (constants and defaults)
+   - wled00/pin_manager.h (pin definitions)
+
+================================================================================
+Last Updated: January 16, 2026
+Reference: WLED Project - ESP32/ESP8266 LED Controller Firmware
+================================================================================
