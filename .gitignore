@@ -19,6 +19,7 @@ replace_fs.py
 wled-update.sh
 
 /build_output/
+/build_output/custom/
 /node_modules/
 /logs/
 /wled00/extLibs
