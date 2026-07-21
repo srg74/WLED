@@ -14,7 +14,7 @@
     #define RTCWDT_BROWN_OUT_RESET RESET_REASON::BROWN_OUT_RESET    // P4 has BROWN_OUT_RESET instead of RTCWDT_BROWN_OUT_RESET
   #endif
   // for bootloop detection
-  #if ESP_IDF_VERSION_MAJOR > 4
+  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
     #include "esp_rtc_time.h"
   #else
     #include "esp32/rtc.h"
