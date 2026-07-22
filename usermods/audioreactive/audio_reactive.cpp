@@ -4,7 +4,9 @@
 #ifdef ARDUINO_ARCH_ESP32
 
 #include <driver/i2s.h>
-#include <driver/adc.h>
+#if defined(CONFIG_IDF_TARGET_ESP32) && (ESP_IDF_VERSION_MAJOR < 5)
+#include <driver/adc.h>  // legacy ADC driver causes bootloops in V5
+#endif
 
 #endif
 
