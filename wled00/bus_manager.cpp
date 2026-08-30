@@ -940,7 +940,7 @@ BusHub75Matrix::BusHub75Matrix(const BusConfig &bc) : Bus(bc.type, bc.start, bc.
 
 #elif defined(CONFIG_IDF_TARGET_ESP32)
   // generic ESP32 pinouts
-  #if defined(BOARD_HAS_PSRAM) // all ESP32 pinouts require gpio 16 or 17, which are controling PSRAM
+  #if defined(BOARD_HAS_PSRAM) // all ESP32 pinouts require gpio 16 or 17, which are controlling PSRAM
     #warning "ESP32 HUB75 pinout is not compatible with PSRAM boards."
   #endif
   #if defined(ESP32_FORUM_PINOUT) || defined(FORUM_ESP32_PINOUT) // Common format for boards designed for SmartMatrix
