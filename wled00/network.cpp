@@ -294,11 +294,12 @@ bool initEthernet()
     return false;
   }
 
-  if (multiWiFi[0].staticIP != (uint32_t)0x00000000 && multiWiFi[0].staticGW != (uint32_t)0x00000000) {
-        ETH.config(multiWiFi[0].staticIP, multiWiFi[0].staticGW, multiWiFi[0].staticSN, dnsAddress);
-      } else {
-        ETH.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
-      }
+  // https://github.com/wled/WLED/issues/5247
+  if (multiWiFi.size() && multiWiFi[0].staticIP != IPAddress() && multiWiFi[0].staticGW != IPAddress()) {
+    ETH.config(multiWiFi[0].staticIP, multiWiFi[0].staticGW, multiWiFi[0].staticSN, dnsAddress);
+  } else {
+    ETH.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  }
 
   successfullyConfiguredEthernet = true;
   DEBUG_PRINTLN(F("initE: *** Ethernet successfully configured! ***"));
@@ -434,6 +435,10 @@ void installIPv6RABlocker() {
   raw_recv(ra_blocker, blockRouterAdvertisements, NULL);
 }
 #endif
+
+// Runtime state private to this file - previously WLED_GLOBAL, a leftover from
+// when all state lived in one big extern block regardless of who used it.
+static byte apClients = 0;
 
 //handle Ethernet connection event
 void WiFiEvent(WiFiEvent_t event)
