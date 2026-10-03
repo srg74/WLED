@@ -78,6 +78,14 @@ Mention your testing in the PR description (e.g., "Tested on ESP32 + WS2812B").
 We're all volunteers, so reviews can take some time (longer during busy times). 
 Don't worry - we haven't forgotten you! Feel free to ping after a week if there's no activity.
 
+### CoderabbitAI Comments
+
+After submitting your PR, and when pushing new changes, or AI review tool 'CoderabbitAI' will review and comment on the source code.
+
+CodeRabbit findings are **review input**, not **mandatory changes**.
+
+Contributors should assess each finding against the code, tests, and project constraints. They can reject an incorrect finding or explain why a proposed change is unsuitable. Addressing every CodeRabbit comment is not a condition for a sound contribution.
+
 ### Updating your code
 While the PR is open, you can keep updating your branch - just push more commits! GitHub will automatically update your PR. 
 
@@ -263,17 +271,49 @@ Within the condition, no space should be between the parenthesis and variables.
 Spaces between variables and operators are up to the authors discretion.
 There should be no space between function names and their argument parenthesis.
 
-Good:  
+Good:
 ```cpp
 if (a == b) {
   doStuff(a);
 }
 ```
 
-Not good:  
+Not good:
 ```cpp
 if( a==b ){
   doStuff ( a);
+}
+```
+
+Prefer compact function parameter lists and `if` conditions rather than putting each parameter or condition part on its own line. Wrap parameter lists only when they become very long.
+
+Good:
+
+```cpp
+void setColor(uint8_t red, uint8_t green, uint8_t blue);  // sets main segment color
+
+
+if (enabled && segment.isActive() && color != 0) { // check if modifications are allowed
+  setColor(red, green, blue);
+}
+```
+
+
+Not good:
+
+```cpp
+void setColor (
+  uint8_t red,
+  uint8_t green,
+  uint8_t blue
+);
+
+if (enabled &&
+    segment.isActive() &&
+    color != 0) {
+  setColor(red, 
+          green, 
+          blue);
 }
 ```
 
